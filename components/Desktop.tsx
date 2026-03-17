@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
+import { loadLastSize, saveLastSize } from "@/lib/storage";
 
 interface DesktopProps {
   onLaunch: (size: number) => void;
@@ -19,28 +20,7 @@ const SIZE_OPTIONS = [
 export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
   const [showPlay, setShowPlay] = useState(false);
   const [showReadme, setShowReadme] = useState(false);
-  const [selected, setSelected] = useState(15);
-  const lastTap = useRef<{ id: string; time: number } | null>(null);
-
-  const handleIconTouch = (
-    e: React.TouchEvent,
-    id: string,
-    action: () => void,
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const now = Date.now();
-    if (
-      lastTap.current &&
-      lastTap.current.id === id &&
-      now - lastTap.current.time < 400
-    ) {
-      lastTap.current = null;
-      action();
-    } else {
-      lastTap.current = { id, time: now };
-    }
-  };
+  const [selected, setSelected] = useState<number>(() => loadLastSize(15));
 
   return (
     <div className="desktop">
@@ -48,35 +28,19 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
         {/* Desktop icons */}
         <div className="desktop-icons">
           {/* Play */}
-          <div
-            className="desktop-icon"
-            onClick={() => setShowPlay(true)}
-            onTouchEnd={(e) =>
-              handleIconTouch(e, "play", () => setShowPlay(true))
-            }
-          >
+          <div className="desktop-icon" onClick={() => setShowPlay(true)}>
             <div className="desktop-icon-img">🧩</div>
             <div className="desktop-icon-label">Play</div>
           </div>
 
           {/* Settings */}
-          <div
-            className="desktop-icon"
-            onClick={onSettings}
-            onTouchEnd={(e) => handleIconTouch(e, "settings", onSettings)}
-          >
+          <div className="desktop-icon" onClick={onSettings}>
             <div className="desktop-icon-img">⚙️</div>
             <div className="desktop-icon-label">Settings</div>
           </div>
 
           {/* Read Me */}
-          <div
-            className="desktop-icon"
-            onClick={() => setShowReadme(true)}
-            onTouchEnd={(e) =>
-              handleIconTouch(e, "readme", () => setShowReadme(true))
-            }
-          >
+          <div className="desktop-icon" onClick={() => setShowReadme(true)}>
             <div className="desktop-icon-img">📄</div>
             <div className="desktop-icon-label">Read Me</div>
           </div>
@@ -118,7 +82,10 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
                       name="maze-size"
                       className="settings-checkbox"
                       checked={selected === value}
-                      onChange={() => setSelected(value)}
+                      onChange={() => {
+                        setSelected(value);
+                        saveLastSize(value);
+                      }}
                     />
                     <span style={{ fontSize: 17 }}>{label}</span>
                     <span className="settings-hint">{sub}</span>

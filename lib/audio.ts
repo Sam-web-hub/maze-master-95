@@ -273,7 +273,7 @@ export function startMusic() {
     drumBus.gain.value = 0.9;
     drumBus.connect(master);
 
-    function scheduleLoop(startTime: number) {
+    const scheduleLoop = (startTime: number) => {
       if (stopped) return;
 
       for (let s = 0; s < PATTERN; s++) {
@@ -303,7 +303,7 @@ export function startMusic() {
       const delay = (nextStart - ac.currentTime - 0.1) * 1000;
       if (!stopped)
         setTimeout(() => scheduleLoop(nextStart), Math.max(0, delay));
-    }
+    };
 
     // Small initial delay so first notes don't clip
     scheduleLoop(ac.currentTime + 0.05);

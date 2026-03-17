@@ -9,112 +9,143 @@ interface DesktopProps {
 }
 
 const SIZE_OPTIONS = [
-  { label: "Small", sub: "10×10", value: 10, icon: "🗺️" },
-  { label: "Medium", sub: "15×15", value: 15, icon: "🧩" },
-  { label: "Large", sub: "20×20", value: 20, icon: "🌐" },
-  { label: "X-Large", sub: "25×25", value: 25, icon: "🏔️" },
-  { label: "Huge", sub: "35×35", value: 35, icon: "🌌" },
+  { label: "Small", sub: "10×10", value: 10 },
+  { label: "Medium", sub: "15×15", value: 15 },
+  { label: "Large", sub: "20×20", value: 20 },
+  { label: "X-Large", sub: "25×25", value: 25 },
+  { label: "Huge", sub: "35×35", value: 35 },
 ];
 
 export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [showPlay, setShowPlay] = useState(false);
   const [showReadme, setShowReadme] = useState(false);
-  const lastTap = useRef<{ value: number; time: number } | null>(null);
+  const [selected, setSelected] = useState(15);
+  const lastTap = useRef<{ id: string; time: number } | null>(null);
 
-  const handleClick = (value: number) => {
-    if (selected === value) onLaunch(value);
-    else setSelected(value);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent, value: number) => {
+  const handleIconTouch = (
+    e: React.TouchEvent,
+    id: string,
+    action: () => void,
+  ) => {
     e.preventDefault();
+    e.stopPropagation();
     const now = Date.now();
     if (
       lastTap.current &&
-      lastTap.current.value === value &&
+      lastTap.current.id === id &&
       now - lastTap.current.time < 400
     ) {
       lastTap.current = null;
-      onLaunch(value);
+      action();
     } else {
-      lastTap.current = { value, time: now };
-      setSelected(value);
+      lastTap.current = { id, time: now };
     }
   };
 
   return (
     <div className="desktop">
-      <div className="desktop-area" onClick={() => setSelected(null)}>
-        {/* Icons grid */}
+      <div className="desktop-area" onClick={() => {}}>
+        {/* Desktop icons */}
         <div className="desktop-icons">
-          {SIZE_OPTIONS.map(({ label, sub, value, icon }) => (
-            <div
-              key={value}
-              className={`desktop-icon${selected === value ? " desktop-icon-selected" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClick(value);
-              }}
-              onTouchEnd={(e) => {
-                e.stopPropagation();
-                handleTouchEnd(e, value);
-              }}
-            >
-              <div className="desktop-icon-img">{icon}</div>
-              <div className="desktop-icon-label">
-                {label}
-                <span className="desktop-icon-sub">{sub}</span>
-              </div>
-            </div>
-          ))}
-
-          {/* Settings icon */}
+          {/* Play */}
           <div
             className="desktop-icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSettings();
-            }}
-            onTouchEnd={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onSettings();
-            }}
+            onClick={() => setShowPlay(true)}
+            onTouchEnd={(e) =>
+              handleIconTouch(e, "play", () => setShowPlay(true))
+            }
+          >
+            <div className="desktop-icon-img">🧩</div>
+            <div className="desktop-icon-label">Play</div>
+          </div>
+
+          {/* Settings */}
+          <div
+            className="desktop-icon"
+            onClick={onSettings}
+            onTouchEnd={(e) => handleIconTouch(e, "settings", onSettings)}
           >
             <div className="desktop-icon-img">⚙️</div>
             <div className="desktop-icon-label">Settings</div>
           </div>
 
-          {/* Read Me icon */}
+          {/* Read Me */}
           <div
             className="desktop-icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowReadme(true);
-            }}
-            onTouchEnd={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setShowReadme(true);
-            }}
+            onClick={() => setShowReadme(true)}
+            onTouchEnd={(e) =>
+              handleIconTouch(e, "readme", () => setShowReadme(true))
+            }
           >
             <div className="desktop-icon-img">📄</div>
             <div className="desktop-icon-label">Read Me</div>
           </div>
         </div>
+      </div>
 
-        {/* Center prompt */}
-        <div className="desktop-prompt">
-          <div className="desktop-prompt-inner">
-            <div className="desktop-prompt-title">🧩 MAZE MASTER 95</div>
-            <div className="desktop-prompt-sub">
-              Double-click an icon to start
+      {/* ── Play / size picker dialog ── */}
+      {showPlay && (
+        <div className="dialog-overlay">
+          <div className="dialog" style={{ minWidth: 300 }}>
+            <div className="title-bar">
+              <div className="title-bar-text">🧩 New Game</div>
+              <div className="title-bar-controls">
+                <div
+                  className="title-btn close-btn"
+                  onClick={() => setShowPlay(false)}
+                >
+                  ✕
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "16px 16px 8px",
+                fontFamily: "VT323, monospace",
+              }}
+            >
+              <div className="group-box">
+                <div className="group-label">Select maze size</div>
+                {SIZE_OPTIONS.map(({ label, sub, value }) => (
+                  <label
+                    key={value}
+                    className="settings-row"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="radio"
+                      name="maze-size"
+                      className="settings-checkbox"
+                      checked={selected === value}
+                      onChange={() => setSelected(value)}
+                    />
+                    <span style={{ fontSize: 17 }}>{label}</span>
+                    <span className="settings-hint">{sub}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="dialog-buttons">
+              <button
+                className="win-btn"
+                onClick={() => {
+                  setShowPlay(false);
+                  onLaunch(selected);
+                }}
+              >
+                ▶ Play
+              </button>
+              <button className="win-btn" onClick={() => setShowPlay(false)}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ReadMe Dialog */}
+      {/* ── ReadMe dialog ── */}
       {showReadme && (
         <div className="dialog-overlay">
           <div className="dialog" style={{ minWidth: 320, maxWidth: 400 }}>
@@ -157,8 +188,7 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
               <div className="group-box" style={{ marginBottom: 10 }}>
                 <div className="group-label">🛠️ Tools</div>
                 <p>
-                  <strong>💡 Auto-Solve</strong> — highlights the full solution
-                  path.
+                  <strong>💡 Auto-Solve</strong> — highlights the full solution.
                 </p>
                 <p>
                   <strong>❓ Hint</strong> — shows just your next step.

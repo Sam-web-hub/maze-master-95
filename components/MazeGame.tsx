@@ -7,6 +7,7 @@ import {
   formatTime,
   type MazeGrid,
   type Cell,
+  type Algorithm,
 } from "@/lib/maze";
 import {
   resumeAudio,
@@ -15,15 +16,6 @@ import {
   playWinFanfare,
 } from "@/lib/audio";
 import { vibrateMove, vibrateVictory } from "@/lib/haptics";
-import {
-  loadSettings,
-  saveSettings,
-  loadBestTimes,
-  saveBestTime,
-  loadLastSize,
-  saveLastSize,
-  type BestTimes,
-} from "@/lib/storage";
 import MazeCanvas from "./MazeCanvas";
 import Desktop from "./Desktop";
 import SettingsDialog, { type Settings } from "./SettingsDialog";
@@ -36,24 +28,31 @@ const SIZE_OPTIONS = [
   { label: "Huge (35×35)", value: 35 },
 ];
 
+const DEFAULT_SETTINGS: Settings = {
+  music: false,
+  fanfare: true,
+  haptics: true,
+};
+
 type Screen = "desktop" | "game";
 
 export default function MazeGame() {
   const [screen, setScreen] = useState<Screen>("desktop");
-  const [size, setSize] = useState<number>(() => loadLastSize(15));
+  const [size, setSize] = useState(15);
   const [maze, setMaze] = useState<MazeGrid>([]);
   const [player, setPlayer] = useState<Cell>({ x: 0, y: 0 });
   const [trail, setTrail] = useState<Cell[]>([]);
   const [solution, setSolution] = useState<Cell[]>([]);
   const [moves, setMoves] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [bestTimes, setBestTimes] = useState<BestTimes>(() => loadBestTimes());
+  const [bestTime, setBestTime] = useState<number | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [showWin, setShowWin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [algorithm, setAlgorithm] = useState<Algorithm>("random");
   const [status, setStatus] = useState("Find the exit — good luck!");
   const [clock, setClock] = useState("");
-  const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -90,7 +89,6 @@ export default function MazeGame() {
   // ── Settings change handler ──────────────────────────────
   const handleSettingsChange = (next: Settings) => {
     setSettings(next);
-    saveSettings(next);
     if (next.music && screen === "game") {
       resumeAudio();
       startMusic();
@@ -99,13 +97,12 @@ export default function MazeGame() {
 
   // ── New maze ─────────────────────────────────────────────
   const startNewMaze = useCallback(
-    (newSize?: number) => {
+    (newSize?: number, newAlgo?: Algorithm) => {
       const s = newSize ?? size;
-      if (newSize !== undefined) {
-        setSize(s);
-        saveLastSize(s);
-      }
-      const newMaze = generateMaze(s, s);
+      const a = newAlgo ?? algorithm;
+      if (newSize !== undefined) setSize(s);
+      if (newAlgo !== undefined) setAlgorithm(a);
+      const newMaze = generateMaze(s, s, a);
       setMaze(newMaze);
       setPlayer({ x: 0, y: 0 });
       setTrail([]);
@@ -122,7 +119,7 @@ export default function MazeGame() {
       }, 1000);
       setScreen("game");
     },
-    [size],
+    [size, algorithm],
   );
 
   // ── Move handler ─────────────────────────────────────────
@@ -162,7 +159,7 @@ export default function MazeGame() {
           setGameOver(true);
           if (timerRef.current) clearInterval(timerRef.current);
           const ms = Date.now() - startTimeRef.current!;
-          setBestTimes(saveBestTime(size, ms));
+          setBestTime((b) => (b === null || ms < b ? ms : b));
           setStatus("🎉 YOU ESCAPED THE MAZE!");
 
           // Win sounds + haptics
@@ -263,6 +260,12 @@ export default function MazeGame() {
     startNewMaze(s);
   };
 
+  const handleAlgoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const a = e.target.value as Algorithm;
+    setAlgorithm(a);
+    startNewMaze(undefined, a);
+  };
+
   const handleBackToDesktop = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     stopMusic();
@@ -276,7 +279,7 @@ export default function MazeGame() {
     return (
       <>
         <Desktop
-          onLaunch={startNewMaze}
+          onLaunch={(size, algo) => startNewMaze(size, algo)}
           clock={clock}
           onSettings={() => {
             resumeAudio();
@@ -332,6 +335,7 @@ export default function MazeGame() {
             className="win-select"
             value={size}
             onChange={handleSizeChange}
+            aria-label="Maze size"
             title="Select maze size"
           >
             {SIZE_OPTIONS.map((o) => (
@@ -339,6 +343,19 @@ export default function MazeGame() {
                 {o.label}
               </option>
             ))}
+          </select>
+          <div className="separator" />
+          <span className="toolbar-label">Algo:</span>
+          <select
+            className="win-select"
+            value={algorithm}
+            onChange={handleAlgoChange}
+            aria-label="Maze generation algorithm"
+            title="Select maze generation algorithm"
+          >
+            <option value="recursive">Backtracker</option>
+            <option value="prims">Prim's</option>
+            <option value="random">Random</option>
           </select>
           <div className="separator" />
           <button className="win-btn" onClick={handleAutoSolve}>
@@ -374,9 +391,7 @@ export default function MazeGame() {
           <div className="mobile-stat">
             Best:{" "}
             <span className="mobile-stat-val">
-              {bestTimes[size] !== undefined
-                ? formatTime(bestTimes[size])
-                : "--:--"}
+              {bestTime !== null ? formatTime(bestTime) : "--:--"}
             </span>
           </div>
         </div>
@@ -409,9 +424,7 @@ export default function MazeGame() {
               <div className="stat-row">
                 <span>Best:</span>
                 <span className="stat-value">
-                  {bestTimes[size] !== undefined
-                    ? formatTime(bestTimes[size])
-                    : "--:--"}
+                  {bestTime !== null ? formatTime(bestTime) : "--:--"}
                 </span>
               </div>
             </div>
@@ -466,6 +479,12 @@ export default function MazeGame() {
                 {settings.fanfare ? "🎺 Fanfare on" : "🔕 Fanfare off"}
                 <br />
                 {settings.haptics ? "📳 Haptics on" : "📵 Haptics off"}
+                <br />
+                {algorithm === "recursive"
+                  ? "🔀 Backtracker"
+                  : algorithm === "prims"
+                    ? "🌿 Prim's"
+                    : "🎲 Random"}
               </div>
             </div>
           </div>

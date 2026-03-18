@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { loadLastSize, saveLastSize } from "@/lib/storage";
+import { type Algorithm } from "@/lib/maze";
 
 interface DesktopProps {
-  onLaunch: (size: number) => void;
+  onLaunch: (size: number, algorithm: Algorithm) => void;
   onSettings: () => void;
   clock: string;
 }
@@ -20,27 +20,46 @@ const SIZE_OPTIONS = [
 export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
   const [showPlay, setShowPlay] = useState(false);
   const [showReadme, setShowReadme] = useState(false);
-  const [selected, setSelected] = useState<number>(() => loadLastSize(15));
+  const [selected, setSelected] = useState(15);
+  const [algorithm, setAlgorithm] = useState<Algorithm>("random");
+
+  // Single unified handler — works for both mouse clicks and touch taps.
+  // onTouchEnd calls e.preventDefault() to suppress the subsequent synthetic
+  // mouse click that browsers fire ~300ms later, preventing double-triggers.
+  const makeHandlers = (action: () => void) => ({
+    onClick: action,
+    onTouchEnd: (e: React.TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      action();
+    },
+  });
 
   return (
     <div className="desktop">
-      <div className="desktop-area" onClick={() => {}}>
+      <div className="desktop-area">
         {/* Desktop icons */}
         <div className="desktop-icons">
           {/* Play */}
-          <div className="desktop-icon" onClick={() => setShowPlay(true)}>
+          <div
+            className="desktop-icon"
+            {...makeHandlers(() => setShowPlay(true))}
+          >
             <div className="desktop-icon-img">🧩</div>
             <div className="desktop-icon-label">Play</div>
           </div>
 
           {/* Settings */}
-          <div className="desktop-icon" onClick={onSettings}>
+          <div className="desktop-icon" {...makeHandlers(onSettings)}>
             <div className="desktop-icon-img">⚙️</div>
             <div className="desktop-icon-label">Settings</div>
           </div>
 
           {/* Read Me */}
-          <div className="desktop-icon" onClick={() => setShowReadme(true)}>
+          <div
+            className="desktop-icon"
+            {...makeHandlers(() => setShowReadme(true))}
+          >
             <div className="desktop-icon-img">📄</div>
             <div className="desktop-icon-label">Read Me</div>
           </div>
@@ -56,13 +75,12 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
               <div className="title-bar-controls">
                 <div
                   className="title-btn close-btn"
-                  onClick={() => setShowPlay(false)}
+                  {...makeHandlers(() => setShowPlay(false))}
                 >
                   ✕
                 </div>
               </div>
             </div>
-
             <div
               style={{
                 padding: "16px 16px 8px",
@@ -82,10 +100,7 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
                       name="maze-size"
                       className="settings-checkbox"
                       checked={selected === value}
-                      onChange={() => {
-                        setSelected(value);
-                        saveLastSize(value);
-                      }}
+                      onChange={() => setSelected(value)}
                     />
                     <span style={{ fontSize: 17 }}>{label}</span>
                     <span className="settings-hint">{sub}</span>
@@ -93,18 +108,62 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
                 ))}
               </div>
             </div>
-
+            <div
+              style={{ padding: "0 16px 8px", fontFamily: "VT323, monospace" }}
+            >
+              <div className="group-box">
+                <div className="group-label">Select algorithm</div>
+                {(
+                  [
+                    {
+                      value: "recursive",
+                      label: "Recursive Backtracker",
+                      hint: "Long winding paths",
+                    },
+                    {
+                      value: "prims",
+                      label: "Prim's Algorithm",
+                      hint: "Bushy, many dead ends",
+                    },
+                    {
+                      value: "random",
+                      label: "Surprise Me!",
+                      hint: "Random each time",
+                    },
+                  ] as const
+                ).map(({ value, label, hint }) => (
+                  <label
+                    key={value}
+                    className="settings-row"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="radio"
+                      name="maze-algo"
+                      className="settings-checkbox"
+                      checked={algorithm === value}
+                      onChange={() => setAlgorithm(value)}
+                    />
+                    <span style={{ fontSize: 17 }}>{label}</span>
+                    <span className="settings-hint">{hint}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="dialog-buttons">
               <button
                 className="win-btn"
-                onClick={() => {
+                {...makeHandlers(() => {
                   setShowPlay(false);
-                  onLaunch(selected);
-                }}
+                  onLaunch(selected, algorithm);
+                })}
               >
                 ▶ Play
               </button>
-              <button className="win-btn" onClick={() => setShowPlay(false)}>
+              <button
+                className="win-btn"
+                {...makeHandlers(() => setShowPlay(false))}
+              >
                 Cancel
               </button>
             </div>
@@ -121,7 +180,7 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
               <div className="title-bar-controls">
                 <div
                   className="title-btn close-btn"
-                  onClick={() => setShowReadme(false)}
+                  {...makeHandlers(() => setShowReadme(false))}
                 >
                   ✕
                 </div>
@@ -173,7 +232,10 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
               </div>
             </div>
             <div className="dialog-buttons">
-              <button className="win-btn" onClick={() => setShowReadme(false)}>
+              <button
+                className="win-btn"
+                {...makeHandlers(() => setShowReadme(false))}
+              >
                 OK
               </button>
             </div>

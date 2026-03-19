@@ -192,42 +192,83 @@ export default function Desktop({ onLaunch, onSettings, clock }: DesktopProps) {
                 fontFamily: "VT323, monospace",
                 fontSize: 17,
                 lineHeight: 1.6,
+                maxHeight: "60vh",
+                overflowY: "auto",
               }}
             >
               <div className="group-box" style={{ marginBottom: 10 }}>
                 <div className="group-label">🎮 How to Play</div>
                 <p>
                   Navigate your red ★ from the <strong>S</strong> (top-left) to
-                  the <strong>E</strong> exit (bottom-right).
+                  the <strong>E</strong> exit (bottom-right). Your orange trail
+                  shows where you have been.
                 </p>
               </div>
               <div className="group-box" style={{ marginBottom: 10 }}>
                 <div className="group-label">⌨️ Controls</div>
                 <p>
-                  <strong>Desktop:</strong> Arrow keys or W A S D
+                  <strong>Desktop:</strong> Arrow keys or W A S D to move one
+                  step at a time.
                 </p>
-                <p>
-                  <strong>Mobile:</strong> Swipe on the maze. Hold your swipe to
-                  keep moving — change direction mid-swipe to turn.
+                <p style={{ marginTop: 4 }}>
+                  <strong>Mobile:</strong> Swipe on the maze to move. Keep
+                  holding after the swipe to auto-run in that direction — the
+                  player stops automatically when it hits a wall. Redirect
+                  mid-hold by swiping a new direction without lifting your
+                  finger.
                 </p>
               </div>
               <div className="group-box" style={{ marginBottom: 10 }}>
                 <div className="group-label">🛠️ Tools</div>
                 <p>
-                  <strong>💡 Auto-Solve</strong> — highlights the full solution.
+                  <strong>💡 Auto-Solve</strong> — highlights the full shortest
+                  path from your current position to the exit.
                 </p>
-                <p>
-                  <strong>❓ Hint</strong> — shows just your next step.
+                <p style={{ marginTop: 4 }}>
+                  <strong>❓ Hint</strong> — reveals only your very next step.
                 </p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>🧹 Clear</strong> — removes your trail and any
+                  solution highlight.
+                </p>
+              </div>
+              <div className="group-box" style={{ marginBottom: 10 }}>
+                <div className="group-label">🔀 Algorithms</div>
                 <p>
-                  <strong>🧹 Clear</strong> — removes trail and solution.
+                  Choose how your maze is generated — in the New Game dialog or
+                  the Algo dropdown in the toolbar:
+                </p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>Recursive Backtracker</strong> — carves long winding
+                  corridors with a strong single path. Easier to navigate.
+                </p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>{"Prim's Algorithm"}</strong> — grows the maze outward
+                  from a seed, producing a bushy layout packed with short dead
+                  ends. Much harder.
+                </p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>Surprise Me!</strong> — picks one of the two
+                  algorithms at random each game.
                 </p>
               </div>
               <div className="group-box" style={{ marginBottom: 10 }}>
                 <div className="group-label">⚙️ Settings</div>
                 <p>
-                  Toggle background music, win fanfare, and haptic vibration
-                  from the Settings icon or the ⚙️ button in the toolbar.
+                  <strong>🎵 Background music</strong> — chiptune loop that
+                  plays during the game.
+                </p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>🎺 Win fanfare</strong> — plays a short jingle when
+                  you reach the exit.
+                </p>
+                <p style={{ marginTop: 4 }}>
+                  <strong>📳 Haptics</strong> — vibrates on each move and plays
+                  a victory pattern when you win. Mobile only.
+                </p>
+                <p style={{ marginTop: 4 }}>
+                  Access settings from the ⚙️ desktop icon or the ⚙️ toolbar
+                  button in-game.
                 </p>
               </div>
             </div>

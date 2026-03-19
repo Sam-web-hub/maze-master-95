@@ -71,16 +71,29 @@ export default function MazeCanvas({
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    const lw = Math.max(1.5, CELL / 10);
+    const inset = Math.max(2, Math.ceil(lw) + 1);
+
     for (const t of trail) {
       ctx.fillStyle = "rgba(255,140,0,0.32)";
-      ctx.fillRect(t.x * CELL + 2, t.y * CELL + 2, CELL - 2, CELL - 2);
+      ctx.fillRect(
+        t.x * CELL + 1 + inset,
+        t.y * CELL + 1 + inset,
+        CELL - inset * 2,
+        CELL - inset * 2,
+      );
     }
     for (const s of solution) {
       ctx.fillStyle = "rgba(255,215,0,0.62)";
-      ctx.fillRect(s.x * CELL + 2, s.y * CELL + 2, CELL - 2, CELL - 2);
+      ctx.fillRect(
+        s.x * CELL + 1 + inset,
+        s.y * CELL + 1 + inset,
+        CELL - inset * 2,
+        CELL - inset * 2,
+      );
     }
 
-    const lw = Math.max(1.5, CELL / 10);
+    const lw2 = lw; // alias so wall drawing block below is unchanged
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = lw;
     ctx.lineCap = "square";
@@ -111,20 +124,30 @@ export default function MazeCanvas({
       }
     }
 
+    // Outer border
+    const borderW = Math.max(2.5, lw * 1.8);
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = Math.max(2.5, lw * 1.8);
+    ctx.lineWidth = borderW;
     ctx.strokeRect(1, 1, W, H);
 
+    // Entry gap: erase top border of cell (0,0) — use a wide white stroke centred on y=1
+    // Exit gap: erase bottom border of last cell — centred on y=H+1
+    const gapW = CELL - Math.ceil(borderW) * 2; // gap width leaving corners intact
+    const gapLW = borderW + 2; // slightly wider than border to fully cover
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = Math.max(2, lw * 1.8) + 2;
+    ctx.lineWidth = gapLW;
+    ctx.lineCap = "butt";
+    // Entry: top edge of cell (0,0)
     ctx.beginPath();
-    ctx.moveTo(3, 1);
-    ctx.lineTo(CELL - 1, 1);
+    ctx.moveTo(1 + Math.ceil(borderW), 1);
+    ctx.lineTo(1 + Math.ceil(borderW) + gapW, 1);
     ctx.stroke();
+    // Exit: bottom edge of cell (cols-1, rows-1)
     ctx.beginPath();
-    ctx.moveTo(W - CELL + 3, H + 1);
-    ctx.lineTo(W - 1, H + 1);
+    ctx.moveTo(W - Math.ceil(borderW) - gapW, H + 1);
+    ctx.lineTo(W - Math.ceil(borderW), H + 1);
     ctx.stroke();
+    ctx.lineCap = "square";
 
     const r = Math.max(4, CELL * 0.27);
     const fontSize = Math.max(8, Math.floor(CELL * 0.38));

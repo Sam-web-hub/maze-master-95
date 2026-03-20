@@ -13,6 +13,8 @@ import {
   resumeAudio,
   startMusic,
   stopMusic,
+  pauseMusic,
+  resumeMusic,
   playWinFanfare,
 } from "@/lib/audio";
 import { vibrateMove, vibrateVictory } from "@/lib/haptics";
@@ -29,7 +31,7 @@ const SIZE_OPTIONS = [
 ];
 
 const DEFAULT_SETTINGS: Settings = {
-  music: false,
+  music: true,
   fanfare: true,
   haptics: true,
 };
@@ -123,6 +125,11 @@ export default function MazeGame() {
         setElapsed(Math.floor((Date.now() - startTimeRef.current!) / 1000));
       }, 1000);
       setScreen("game");
+      // Restart music if enabled (useEffect won't fire if screen stays "game")
+      if (settingsRef.current.music) {
+        resumeAudio();
+        startMusic();
+      }
     },
     [size, algorithm],
   );
@@ -193,7 +200,7 @@ export default function MazeGame() {
         // Pausing: record when we paused and stop timer
         pausedAtRef.current = Date.now();
         if (timerRef.current) clearInterval(timerRef.current);
-        if (settingsRef.current.music) stopMusic();
+        if (settingsRef.current.music) pauseMusic();
       } else {
         // Resuming: shift startTime forward by time spent paused
         if (pausedAtRef.current !== null && startTimeRef.current !== null) {
@@ -203,10 +210,7 @@ export default function MazeGame() {
         timerRef.current = setInterval(() => {
           setElapsed(Math.floor((Date.now() - startTimeRef.current!) / 1000));
         }, 1000);
-        if (settingsRef.current.music) {
-          resumeAudio();
-          startMusic();
-        }
+        if (settingsRef.current.music) resumeMusic();
       }
       return !p;
     });
@@ -378,7 +382,7 @@ export default function MazeGame() {
             className="win-select"
             value={size}
             onChange={handleSizeChange}
-            title="Select maze size"
+            title="Maze size (affects difficulty and display)"
           >
             {SIZE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -392,7 +396,7 @@ export default function MazeGame() {
             className="win-select"
             value={algorithm}
             onChange={handleAlgoChange}
-            title="Select maze generation algorithm"
+            title="Maze generation algorithm (affects maze layout and difficulty)"
           >
             <option value="recursive">Backtracker</option>
             <option value="prims">Prim's</option>

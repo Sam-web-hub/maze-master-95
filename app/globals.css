@@ -463,7 +463,6 @@ body::after {
   padding: 5px 2px;
   cursor: pointer;
   user-select: none;
-  -webkit-user-select: none;
 }
 
 .settings-row:hover { background: rgba(0,0,128,0.08); }
@@ -480,4 +479,17 @@ body::after {
   font-size: 13px;
   color: var(--win-dark);
   margin-left: 2px;
+}
+
+/* ── Pause overlay ── */
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  background: rgba(192, 192, 192, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
 }

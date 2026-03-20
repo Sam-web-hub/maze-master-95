@@ -49,6 +49,7 @@ export default function MazeGame() {
   const [gameOver, setGameOver] = useState(false);
   const [showWin, setShowWin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [algorithm, setAlgorithm] = useState<Algorithm>("random");
   const [status, setStatus] = useState("Find the exit — good luck!");
   const [clock, setClock] = useState("");
@@ -61,6 +62,10 @@ export default function MazeGame() {
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+  const pausedRef = useRef(false);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   // ── Clock ────────────────────────────────────────────────
   useEffect(() => {
@@ -125,7 +130,7 @@ export default function MazeGame() {
   // ── Move handler ─────────────────────────────────────────
   const handleMove = useCallback(
     (dx: number, dy: number) => {
-      if (gameOver || maze.length === 0) return;
+      if (gameOver || maze.length === 0 || pausedRef.current) return;
 
       setPlayer((prev) => {
         const nx = prev.x + dx,
@@ -179,6 +184,34 @@ export default function MazeGame() {
     [gameOver, maze, size],
   );
 
+  const pausedAtRef = useRef<number | null>(null);
+
+  const handlePause = useCallback(() => {
+    if (gameOver) return;
+    setPaused((p) => {
+      if (!p) {
+        // Pausing: record when we paused and stop timer
+        pausedAtRef.current = Date.now();
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (settingsRef.current.music) stopMusic();
+      } else {
+        // Resuming: shift startTime forward by time spent paused
+        if (pausedAtRef.current !== null && startTimeRef.current !== null) {
+          startTimeRef.current += Date.now() - pausedAtRef.current;
+          pausedAtRef.current = null;
+        }
+        timerRef.current = setInterval(() => {
+          setElapsed(Math.floor((Date.now() - startTimeRef.current!) / 1000));
+        }, 1000);
+        if (settingsRef.current.music) {
+          resumeAudio();
+          startMusic();
+        }
+      }
+      return !p;
+    });
+  }, [gameOver]);
+
   // ── Keyboard ─────────────────────────────────────────────
   useEffect(() => {
     if (screen !== "game") return;
@@ -197,6 +230,11 @@ export default function MazeGame() {
         d: [1, 0],
         D: [1, 0],
       };
+      if (e.key === " " || e.key === "Escape") {
+        e.preventDefault();
+        handlePause();
+        return;
+      }
       if (map[e.key]) {
         e.preventDefault();
         handleMove(...map[e.key]);
@@ -204,7 +242,7 @@ export default function MazeGame() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleMove, screen]);
+  }, [handleMove, handlePause, screen]);
 
   const handleAutoSolve = () => {
     const sol = solveMaze(
@@ -272,7 +310,12 @@ export default function MazeGame() {
     setScreen("desktop");
   };
 
-  const timerDisplay = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, "0")}`;
+  // When paused, freeze display at the moment we paused rather than letting it tick
+  const displaySeconds =
+    paused && pausedAtRef.current !== null && startTimeRef.current !== null
+      ? Math.floor((pausedAtRef.current - startTimeRef.current) / 1000)
+      : elapsed;
+  const timerDisplay = `${Math.floor(displaySeconds / 60)}:${(displaySeconds % 60).toString().padStart(2, "0")}`;
 
   // ── Desktop screen ────────────────────────────────────────
   if (screen === "desktop") {
@@ -335,7 +378,6 @@ export default function MazeGame() {
             className="win-select"
             value={size}
             onChange={handleSizeChange}
-            aria-label="Maze size"
             title="Select maze size"
           >
             {SIZE_OPTIONS.map((o) => (
@@ -350,7 +392,6 @@ export default function MazeGame() {
             className="win-select"
             value={algorithm}
             onChange={handleAlgoChange}
-            aria-label="Maze generation algorithm"
             title="Select maze generation algorithm"
           >
             <option value="recursive">Backtracker</option>
@@ -378,6 +419,15 @@ export default function MazeGame() {
           >
             ⚙️
           </button>
+          <div className="separator" />
+          <button
+            className={`win-btn${paused ? " pressed" : ""}`}
+            onClick={handlePause}
+            disabled={gameOver}
+            title="Pause (Space / Esc)"
+          >
+            {paused ? "▶ Resume" : "⏸ Pause"}
+          </button>
         </div>
 
         {/* Mobile stats bar */}
@@ -398,7 +448,45 @@ export default function MazeGame() {
 
         {/* Main content */}
         <div className="content">
-          <div className="maze-col">
+          <div className="maze-col" style={{ position: "relative" }}>
+            {/* Pause overlay */}
+            {paused && (
+              <div className="pause-overlay">
+                <div
+                  className="dialog"
+                  style={{ minWidth: 260, textAlign: "center" }}
+                >
+                  <div className="title-bar">
+                    <div className="title-bar-text">⏸ Game Paused</div>
+                  </div>
+                  <div
+                    className="dialog-content"
+                    style={{
+                      justifyContent: "center",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ fontSize: 40 }}>⏸</div>
+                    <div
+                      style={{ fontFamily: "VT323, monospace", fontSize: 18 }}
+                    >
+                      Press <strong>Space</strong> or <strong>Esc</strong> to
+                      resume
+                    </div>
+                  </div>
+                  <div className="dialog-buttons">
+                    <button className="win-btn" onClick={handlePause}>
+                      ▶ Resume
+                    </button>
+                    <button className="win-btn" onClick={handleBackToDesktop}>
+                      Main Menu
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <MazeCanvas
               maze={maze}
               cols={size}
